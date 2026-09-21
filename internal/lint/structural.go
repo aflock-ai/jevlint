@@ -12,23 +12,26 @@ import (
 func StructuralChecks(p *Policy) []Finding {
 	var out []Finding
 
-	if len(p.Roots) == 0 {
+	// roots and a TSA only matter when the policy verifies via X.509/keyless
+	// certificates. A pure public-key policy legitimately has neither, so these
+	// are gated to avoid a false positive on key-based policies.
+	usesCerts := p.hasCertFunctionary()
+	if usesCerts && len(p.Roots) == 0 {
 		out = append(out, Finding{High, "no-roots", "policy",
-			"No roots block — nothing anchors the signing certificates.",
-			"Add a roots block with the platform Root CA (base64) from the discovery doc.", 0})
+			"A functionary verifies by X.509 certificate, but the policy has no roots — an x509 verifier with no trusted roots cannot verify anything.",
+			"Add a roots block with the trusted CA (base64), or switch the functionary to a public key.", 0})
 	}
 	for name, r := range p.Roots {
 		if r.Certificate != "" && len(r.Intermediates) == 0 {
 			out = append(out, Finding{Low, "no-intermediates", "root " + name,
-				"Root has a certificate but no intermediates — a leaf that chains through a Fulcio intermediate will not verify.",
-				"If signing is keyless, list the Fulcio CA (base64) in intermediates.", 0})
+				"Root has a certificate but no intermediates — a leaf that chains through an intermediate (e.g. a Fulcio CA) will not verify.",
+				"If signing is keyless, list the intermediate CA (base64) in intermediates.", 0})
 		}
 	}
-
-	if len(p.TimestampAuthorities) == 0 {
-		out = append(out, Finding{Medium, "no-tsa", "policy",
-			"No timestampauthorities — a signature can only be judged against the cert's own lifetime, not an RFC-3161 time.",
-			"Add a timestampauthorities block from discovery signing.tsa_cert_chain_url.", 0})
+	if usesCerts && len(p.TimestampAuthorities) == 0 {
+		out = append(out, Finding{Low, "no-tsa", "policy",
+			"No timestampauthorities. Timestamping is optional in witness, but keyless (short-lived Fulcio) certificates outlive their validity window and need a TSA root to verify after expiry.",
+			"If signatures are keyless/timestamped, add a timestampauthorities block from discovery signing.tsa_cert_chain_url.", 0})
 	}
 
 	out = append(out, expiryChecks(p)...)
@@ -41,29 +44,24 @@ func StructuralChecks(p *Policy) []Finding {
 				"Add a functionary (a certConstraint or public key) that may sign this step.", 0})
 		}
 		for _, fn := range step.Functionaries {
+			// Cert checks apply only to cert-based functionaries; a publickeyid
+			// functionary ignores certConstraint entirely.
+			if !fn.certBased() {
+				continue
+			}
 			cc := fn.CertConstraint
 			if cc == nil {
 				continue
 			}
 			if funcWidens(cc) {
 				out = append(out, Finding{High, "wildcard-functionary", loc,
-					fmt.Sprintf("Functionary admits any tenant via %s — a signature from any tenant would satisfy this step.", strings.Join(cc.URIs, ", ")),
-					"Scope the SPIFFE URI to spiffe://<domain>/tenant/<id>/agent/*.", 0})
-			} else if len(cc.URIs) == 0 {
-				out = append(out, Finding{Low, "unconstrained-functionary", loc,
-					"Functionary certConstraint names no SPIFFE URI to scope identity by.",
-					"Add a uris entry pinning the tenant, or use a public key constraint.", 0})
+					fmt.Sprintf("A SPIFFE URI constraint (%s) is a wildcard not scoped to a /tenant/<id>/ path — under this trust domain it accepts any tenant's agents.", strings.Join(cc.URIs, ", ")),
+					"Scope the SPIFFE URI to spiffe://<trust-domain>/tenant/<id>/agent/*.", 0})
 			}
-			var empties []string
-			for k, v := range map[string][]string{"dnsnames": cc.DNSNames, "emails": cc.Emails, "organizations": cc.Organizations} {
-				if v != nil && len(v) == 0 {
-					empties = append(empties, k)
-				}
-			}
-			if len(empties) > 0 {
-				out = append(out, Finding{Low, "empty-constraints", loc,
-					fmt.Sprintf("Empty %s fail closed under --policy-hardening enforce.", strings.Join(empties, "/")),
-					`Set the field to ["*"] to admit any, or list the exact values to require.`, 0})
+			if trustsAnyRoot(cc) {
+				out = append(out, Finding{Medium, "trusts-any-root", loc,
+					`Functionary certConstraint.roots is ["*"], which accepts a certificate from ANY configured root.`,
+					"List the specific root IDs this step should trust instead of \"*\".", 0})
 			}
 		}
 	}

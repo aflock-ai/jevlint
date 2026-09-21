@@ -21,17 +21,70 @@ func TestStructural_FlagsWildcardAndMissingTSA(t *testing.T) {
 	p := &Policy{
 		Roots: map[string]Root{"r": {Certificate: "x"}},
 		Steps: map[string]Step{"s": {
-			Functionaries: []Functionary{{CertConstraint: &CertConstraint{
-				URIs: []string{"spiffe://testifysec.com/*"}, DNSNames: []string{},
+			Functionaries: []Functionary{{Type: "root", CertConstraint: &CertConstraint{
+				URIs: []string{"spiffe://testifysec.com/*"},
 			}}},
 			Attestations: []Attestation{{Type: "https://aflock.ai/attestations/git/v0.1"}},
 		}},
 	}
 	fs := StructuralChecks(p)
-	for _, want := range []string{"wildcard-functionary", "no-tsa", "no-intermediates", "empty-constraints"} {
+	for _, want := range []string{"wildcard-functionary", "no-tsa", "no-intermediates"} {
 		if !hasCheck(fs, want) {
 			t.Errorf("expected a %q finding, got %+v", want, fs)
 		}
+	}
+}
+
+// A pure public-key policy needs no roots and no TSA — flagging them is the
+// false positive the docs research caught.
+func TestStructural_KeyBasedNeedsNoRoots(t *testing.T) {
+	p := &Policy{
+		Expires:    "2099-01-01T00:00:00Z",
+		PublicKeys: map[string]jsonRaw{"k1": []byte("{}")},
+		Steps: map[string]Step{"s": {
+			Functionaries: []Functionary{{Type: "publickey", PublicKeyID: "k1"}},
+			Attestations:  []Attestation{{Type: "https://aflock.ai/attestations/git/v0.1"}},
+		}},
+	}
+	fs := StructuralChecks(p)
+	if hasCheck(fs, "no-roots") || hasCheck(fs, "no-tsa") {
+		t.Errorf("a key-based policy must not be flagged for missing roots/tsa, got %+v", fs)
+	}
+}
+
+// A wildcard hidden behind a tenant-pinned URI must still be caught — the
+// short-circuit bug.
+func TestFunc_MixedPinnedAndWildcard(t *testing.T) {
+	p := &Policy{
+		Roots:                map[string]Root{"r": {Certificate: "x", Intermediates: []string{"y"}}},
+		TimestampAuthorities: map[string]jsonRaw{"t": []byte("{}")},
+		Expires:              "2099-01-01T00:00:00Z",
+		Steps: map[string]Step{"s": {
+			Functionaries: []Functionary{{Type: "root", CertConstraint: &CertConstraint{
+				URIs: []string{"spiffe://d/tenant/x/agent/*", "spiffe://d/*"},
+			}}},
+			Attestations: []Attestation{{Type: "t"}},
+		}},
+	}
+	if !hasCheck(StructuralChecks(p), "wildcard-functionary") {
+		t.Error("an untenanted spiffe wildcard must be caught even beside a tenant-pinned one")
+	}
+}
+
+func TestFunc_TrustsAnyRoot(t *testing.T) {
+	p := &Policy{
+		Roots:                map[string]Root{"r": {Certificate: "x", Intermediates: []string{"y"}}},
+		TimestampAuthorities: map[string]jsonRaw{"t": []byte("{}")},
+		Expires:              "2099-01-01T00:00:00Z",
+		Steps: map[string]Step{"s": {
+			Functionaries: []Functionary{{Type: "root", CertConstraint: &CertConstraint{
+				URIs: []string{"spiffe://d/tenant/x/agent/*"}, Roots: []string{"*"},
+			}}},
+			Attestations: []Attestation{{Type: "t"}},
+		}},
+	}
+	if !hasCheck(StructuralChecks(p), "trusts-any-root") {
+		t.Error(`certConstraint.roots ["*"] must be flagged`)
 	}
 }
 

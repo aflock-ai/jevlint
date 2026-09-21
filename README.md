@@ -101,7 +101,7 @@ lints every changed `*.policy.json` on a PR and diffs it against the base branch
 
 | kind | how | catches |
 |---|---|---|
-| **structural** | deterministic, never calls Jev, never fails open | no `roots`, no `timestampauthorities`, no intermediates, expired policy, a step with no functionary, a functionary that admits any tenant via `spiffe://…/*`, empty cert constraints, an **unconditional `deny`** (blatant case, caught offline), and a **secret in the policy** — a private key or API token where only public certs and Rego belong |
+| **structural** | deterministic, never calls Jev, never fails open | missing `roots` / `timestampauthorities` **only when a functionary is cert-based** (a public-key policy needs neither), missing intermediates, expired policy, a step with no functionary, a SPIFFE URI wildcard not scoped to `/tenant/<id>/`, a `certConstraint.roots: ["*"]` that trusts any root, an **unconditional `deny`** (caught offline), and a **secret in the policy** — a private key or API token where only public certs and Rego belong |
 | **semantic** | a typed judgment from [TypeSafe Jev](https://typesafe.ai) over the decoded Rego | subtler **unconditional denials**, an **underspecified check** (reads a field it never compares), and — with `--context` — an **over-scoped** policy |
 
 The flagship check — a deny that refuses all evidence — is caught **both**

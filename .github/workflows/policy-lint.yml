@@ -1,0 +1,57 @@
+name: policy-lint
+
+# Lint any policy JSON that a PR changes, and diff it against the base branch to
+# catch a gate being silently weakened. Runs with Jev when a TYPESAFE_API_KEY
+# secret is set, and falls back to deterministic structural checks otherwise.
+
+on:
+  pull_request:
+    paths:
+      - "**/*.policy.json"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Build jevlint
+        run: go build -o jevlint .
+
+      - name: Lint and diff changed policies
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -uo pipefail
+          mode=""
+          if [ -z "${TYPESAFE_API_KEY:-}" ]; then
+            echo "::notice::TYPESAFE_API_KEY not set — running structural checks only"
+            mode="--structural-only"
+          fi
+          status=0
+          changed=$(git diff --name-only "$BASE_SHA"...HEAD -- '**/*.policy.json')
+          if [ -z "$changed" ]; then
+            echo "no policy files changed"; exit 0
+          fi
+          for f in $changed; do
+            echo "::group::lint $f"
+            ./jevlint lint "$f" $mode || status=$?
+            echo "::endgroup::"
+            # Diff against the base version if it existed there.
+            if git cat-file -e "$BASE_SHA:$f" 2>/dev/null; then
+              git show "$BASE_SHA:$f" > /tmp/base.policy.json
+              echo "::group::diff $f (weakening vs base)"
+              ./jevlint diff /tmp/base.policy.json "$f" || status=$?
+              echo "::endgroup::"
+            fi
+          done
+          # Exit 2 (could-not-check) should not fail the PR; a real finding (1) should.
+          if [ "$status" = "1" ]; then exit 1; fi
+          exit 0

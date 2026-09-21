@@ -1,0 +1,41 @@
+{
+  "expires": "2027-09-18T00:00:00Z",
+  "roots": {
+    "testifysec-platform": {
+      "certificate": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCkZBS0UK"
+    }
+  },
+  "steps": {
+    "push-tests": {
+      "name": "push-tests",
+      "functionaries": [
+        {
+          "type": "root",
+          "certConstraint": {
+            "commonname": "*",
+            "dnsnames": [],
+            "emails": [],
+            "organizations": [],
+            "uris": [
+              "spiffe://testifysec.com/*"
+            ],
+            "roots": [
+              "testifysec-platform"
+            ]
+          }
+        }
+      ],
+      "attestations": [
+        {
+          "type": "https://aflock.ai/attestations/git/v0.1",
+          "regopolicies": [
+            {
+              "name": "pushgate-commitMatches",
+              "module": "cGFja2FnZSBwdXNoZ2F0ZS5jb21taXQKCmRlbnlbbXNnXSB7Cglub3QgaXNfc3RyaW5nKGlucHV0LmNvbW1pdGhhc2gpCgltc2cgOj0gInVucmVhZGFibGUgZXZpZGVuY2U6IGdpdCBjb21taXRoYXNoIGlzIG1pc3NpbmciCn0KCiMgcmVuZGVyZWQgd2l0aG91dCBhIGJpbmRpbmcg4oCUIGZpcmVzIG9uIGV2ZXJ5IGlucHV0LCByZWZ1c2VzIGV2ZXJ5dGhpbmcKZGVueVttc2ddIHsKCW1zZyA6PSAicG9saWN5IGRvY3VtZW50IHJlbmRlcmVkIHdpdGhvdXQgYSBjb21taXQgYmluZGluZyIKfQo="
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

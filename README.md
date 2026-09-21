@@ -11,6 +11,8 @@ an unconditional `deny`, and `validate` was green.
 `jevlint` reads the policy the way a reviewer would, and diffs two versions to
 catch a gate being silently loosened.
 
+> **How it works:** see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — what it is, the deterministic and Jev lanes, how Jev judges Rego without executing it, and where it fits the toolchain, with diagrams. Worked examples with expected output are in [`examples/EXAMPLES.md`](examples/EXAMPLES.md).
+
 ## Install
 
 ```

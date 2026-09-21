@@ -1,0 +1,55 @@
+{
+  "expires": "2099-01-01T00:00:00Z",
+  "roots": {
+    "testifysec-platform": {
+      "certificate": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrVENCK3dleGFtcGxlQ0VSVAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==",
+      "intermediates": [
+        "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrVENCK3dleGFtcGxlSU5URVIKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+      ]
+    }
+  },
+  "timestampauthorities": {
+    "testifysec-tsa": {
+      "certificate": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrVENCK3dleGFtcGxlVFNBCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+    }
+  },
+  "steps": {
+    "push-tests": {
+      "name": "push-tests",
+      "functionaries": [
+        {
+          "type": "root",
+          "certConstraint": {
+            "commonname": "*",
+            "dnsnames": [
+              "*"
+            ],
+            "emails": [
+              "*"
+            ],
+            "organizations": [
+              "*"
+            ],
+            "uris": [
+              "spiffe://testifysec.com/tenant/b47684cc/agent/*"
+            ],
+            "roots": [
+              "testifysec-platform"
+            ]
+          }
+        }
+      ],
+      "attestations": [
+        {
+          "type": "https://aflock.ai/attestations/test-results/v0.1",
+          "regopolicies": [
+            {
+              "name": "tests",
+              "module": "cGFja2FnZSBwCgojIHJlYWRzIHN1bW1hcnkuZXJyb3JzIGJ1dCBuZXZlciBkZW5pZXMgb24gaXQsIHNvIGEgc3VpdGUgdGhhdCBFUlJPUkVEIGNhbiBzdGlsbCBwYXNzCmRlbnlbbXNnXSB7CglpbnB1dC5zdW1tYXJ5LmZhaWxlZCA+IDAKCW1zZyA6PSBzcHJpbnRmKCIlZCBmYWlsZWQiLCBbaW5wdXQuc3VtbWFyeS5mYWlsZWRdKQp9CgpzZWVuX2Vycm9ycyA6PSBpbnB1dC5zdW1tYXJ5LmVycm9ycwo="
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

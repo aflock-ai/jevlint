@@ -1,0 +1,109 @@
+{
+  "expires": "2099-01-01T00:00:00Z",
+  "roots": {
+    "testifysec-platform": {
+      "certificate": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrVENCK3dleGFtcGxlQ0VSVAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==",
+      "intermediates": [
+        "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrVENCK3dleGFtcGxlSU5URVIKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="
+      ]
+    }
+  },
+  "timestampauthorities": {
+    "testifysec-tsa": {
+      "certificate": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrVENCK3dleGFtcGxlVFNBCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+    }
+  },
+  "steps": {
+    "push-tests": {
+      "name": "push-tests",
+      "functionaries": [
+        {
+          "type": "root",
+          "certConstraint": {
+            "commonname": "*",
+            "dnsnames": [
+              "*"
+            ],
+            "emails": [
+              "*"
+            ],
+            "organizations": [
+              "*"
+            ],
+            "uris": [
+              "spiffe://testifysec.com/tenant/b47684cc/agent/*"
+            ],
+            "roots": [
+              "testifysec-platform"
+            ]
+          }
+        }
+      ],
+      "attestations": [
+        {
+          "type": "https://aflock.ai/attestations/git/v0.1",
+          "regopolicies": [
+            {
+              "name": "r0",
+              "module": "cGFja2FnZSBwCgpkZW55W21zZ10gewoJbm90IGlzX3N0cmluZyhpbnB1dC5jb21taXRoYXNoKQoJbXNnIDo9ICJtaXNzaW5nIGNvbW1pdGhhc2giCn0KCmRlbnlbbXNnXSB7CgliYWRfZXhpdAoJbXNnIDo9ICJub256ZXJvIGV4aXQiCn0KCmJhZF9leGl0IHsKCWlucHV0LmV4aXRjb2RlICE9IDAKfQo="
+            }
+          ]
+        },
+        {
+          "type": "https://aflock.ai/attestations/sarif/v0.1",
+          "regopolicies": [
+            {
+              "name": "r1",
+              "module": "cGFja2FnZSBwCgpkZW55W21zZ10gewoJbm90IGlzX3N0cmluZyhpbnB1dC5jb21taXRoYXNoKQoJbXNnIDo9ICJtaXNzaW5nIGNvbW1pdGhhc2giCn0KCmRlbnlbbXNnXSB7CgliYWRfZXhpdAoJbXNnIDo9ICJub256ZXJvIGV4aXQiCn0KCmJhZF9leGl0IHsKCWlucHV0LmV4aXRjb2RlICE9IDAKfQo="
+            }
+          ]
+        },
+        {
+          "type": "https://cyclonedx.org/bom",
+          "regopolicies": [
+            {
+              "name": "r2",
+              "module": "cGFja2FnZSBwCgpkZW55W21zZ10gewoJbm90IGlzX3N0cmluZyhpbnB1dC5jb21taXRoYXNoKQoJbXNnIDo9ICJtaXNzaW5nIGNvbW1pdGhhc2giCn0KCmRlbnlbbXNnXSB7CgliYWRfZXhpdAoJbXNnIDo9ICJub256ZXJvIGV4aXQiCn0KCmJhZF9leGl0IHsKCWlucHV0LmV4aXRjb2RlICE9IDAKfQo="
+            }
+          ]
+        },
+        {
+          "type": "https://aflock.ai/attestations/govulncheck/v0.1",
+          "regopolicies": [
+            {
+              "name": "r3",
+              "module": "cGFja2FnZSBwCgpkZW55W21zZ10gewoJbm90IGlzX3N0cmluZyhpbnB1dC5jb21taXRoYXNoKQoJbXNnIDo9ICJtaXNzaW5nIGNvbW1pdGhhc2giCn0KCmRlbnlbbXNnXSB7CgliYWRfZXhpdAoJbXNnIDo9ICJub256ZXJvIGV4aXQiCn0KCmJhZF9leGl0IHsKCWlucHV0LmV4aXRjb2RlICE9IDAKfQo="
+            }
+          ]
+        },
+        {
+          "type": "https://aflock.ai/attestations/go-build/v0.1",
+          "regopolicies": [
+            {
+              "name": "r4",
+              "module": "cGFja2FnZSBwCgpkZW55W21zZ10gewoJbm90IGlzX3N0cmluZyhpbnB1dC5jb21taXRoYXNoKQoJbXNnIDo9ICJtaXNzaW5nIGNvbW1pdGhhc2giCn0KCmRlbnlbbXNnXSB7CgliYWRfZXhpdAoJbXNnIDo9ICJub256ZXJvIGV4aXQiCn0KCmJhZF9leGl0IHsKCWlucHV0LmV4aXRjb2RlICE9IDAKfQo="
+            }
+          ]
+        },
+        {
+          "type": "https://aflock.ai/attestations/product/v0.3",
+          "regopolicies": [
+            {
+              "name": "r5",
+              "module": "cGFja2FnZSBwCgpkZW55W21zZ10gewoJbm90IGlzX3N0cmluZyhpbnB1dC5jb21taXRoYXNoKQoJbXNnIDo9ICJtaXNzaW5nIGNvbW1pdGhhc2giCn0KCmRlbnlbbXNnXSB7CgliYWRfZXhpdAoJbXNnIDo9ICJub256ZXJvIGV4aXQiCn0KCmJhZF9leGl0IHsKCWlucHV0LmV4aXRjb2RlICE9IDAKfQo="
+            }
+          ]
+        },
+        {
+          "type": "https://aflock.ai/attestations/test-results/v0.1",
+          "regopolicies": [
+            {
+              "name": "r6",
+              "module": "cGFja2FnZSBwCgpkZW55W21zZ10gewoJbm90IGlzX3N0cmluZyhpbnB1dC5jb21taXRoYXNoKQoJbXNnIDo9ICJtaXNzaW5nIGNvbW1pdGhhc2giCn0KCmRlbnlbbXNnXSB7CgliYWRfZXhpdAoJbXNnIDo9ICJub256ZXJvIGV4aXQiCn0KCmJhZF9leGl0IHsKCWlucHV0LmV4aXRjb2RlICE9IDAKfQo="
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

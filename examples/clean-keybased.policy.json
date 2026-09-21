@@ -1,0 +1,31 @@
+{
+  "expires": "2099-01-01T00:00:00Z",
+  "publickeys": {
+    "k1": {
+      "keyid": "k1",
+      "key": "AAAA"
+    }
+  },
+  "steps": {
+    "push-tests": {
+      "name": "push-tests",
+      "functionaries": [
+        {
+          "type": "publickey",
+          "publickeyid": "k1"
+        }
+      ],
+      "attestations": [
+        {
+          "type": "https://aflock.ai/attestations/git/v0.1",
+          "regopolicies": [
+            {
+              "name": "commit",
+              "module": "cGFja2FnZSBwCgpkZW55W21zZ10gewoJbm90IGlzX3N0cmluZyhpbnB1dC5jb21taXRoYXNoKQoJbXNnIDo9ICJtaXNzaW5nIGNvbW1pdGhhc2giCn0KCmRlbnlbbXNnXSB7CgliYWRfZXhpdAoJbXNnIDo9ICJub256ZXJvIGV4aXQiCn0KCmJhZF9leGl0IHsKCWlucHV0LmV4aXRjb2RlICE9IDAKfQo="
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

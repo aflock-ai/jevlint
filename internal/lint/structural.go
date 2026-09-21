@@ -67,6 +67,11 @@ func StructuralChecks(p *Policy) []Finding {
 			}
 		}
 	}
+
+	// Deterministic Rego and secret checks — these run offline so the worst
+	// bugs (an unconditional deny, a leaked key) are caught without a Jev key.
+	out = append(out, regoDenyChecks(p)...)
+	out = append(out, SecretChecks(p)...)
 	return out
 }
 

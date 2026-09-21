@@ -1,0 +1,38 @@
+{
+  "expires": "2099-01-01T00:00:00Z",
+  "roots": {
+    "testifysec-platform": {
+      "certificate": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBS0VmYWtlCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K"
+    }
+  },
+  "steps": {
+    "push-tests": {
+      "name": "push-tests",
+      "functionaries": [
+        {
+          "type": "root",
+          "certConstraint": {
+            "commonname": "*",
+            "uris": [
+              "spiffe://testifysec.com/*"
+            ],
+            "roots": [
+              "testifysec-platform"
+            ]
+          }
+        }
+      ],
+      "attestations": [
+        {
+          "type": "https://aflock.ai/attestations/git/v0.1",
+          "regopolicies": [
+            {
+              "name": "pushgate-commitMatches",
+              "module": "cGFja2FnZSBwdXNoZ2F0ZS5jb21taXQKCmRlbnlbbXNnXSB7Cgltc2cgOj0gInJlbmRlcmVkIHdpdGhvdXQgYSBjb21taXQgYmluZGluZyIKfQo="
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

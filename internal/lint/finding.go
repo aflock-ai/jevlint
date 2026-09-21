@@ -45,6 +45,22 @@ func Render(w io.Writer, fs []Finding) {
 	}
 }
 
+// Dedupe drops repeat (check, location) pairs, keeping the first — so a
+// deterministic finding wins over a later Jev one for the same issue.
+func Dedupe(fs []Finding) []Finding {
+	seen := map[string]bool{}
+	out := fs[:0]
+	for _, f := range fs {
+		k := f.Check + "|" + f.Location
+		if seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, f)
+	}
+	return out
+}
+
 // CountCNC returns how many findings are could-not-check (Jev gave no answer).
 func CountCNC(fs []Finding) int {
 	n := 0

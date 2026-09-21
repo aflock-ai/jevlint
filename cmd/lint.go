@@ -49,6 +49,7 @@ func runLint(cmd *cobra.Command, args []string) error {
 		}
 		findings = append(findings, lint.SemanticChecks(p, c, repoContext, minProb)...)
 	}
+	findings = lint.Dedupe(findings)
 
 	cnc := lint.CountCNC(findings)
 	if asJSON {

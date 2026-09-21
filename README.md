@@ -40,8 +40,12 @@ The API key is read, in order, from `--api-key`, `$TYPESAFE_API_KEY` /
 
 | kind | how | catches |
 |---|---|---|
-| **structural** | deterministic, never calls Jev, never fails open | no `roots`, no `timestampauthorities`, no intermediates, expired policy, a step with no functionary, a functionary that admits any tenant via `spiffe://…/*`, empty cert constraints |
-| **semantic** | a typed judgment from [TypeSafe Jev](https://typesafe.ai) over the decoded Rego | an **unconditional `deny`** (refuses all evidence), an **underspecified check** (reads a field it never compares), and — with `--context` — an **over-scoped** policy |
+| **structural** | deterministic, never calls Jev, never fails open | no `roots`, no `timestampauthorities`, no intermediates, expired policy, a step with no functionary, a functionary that admits any tenant via `spiffe://…/*`, empty cert constraints, an **unconditional `deny`** (blatant case, caught offline), and a **secret in the policy** — a private key or API token where only public certs and Rego belong |
+| **semantic** | a typed judgment from [TypeSafe Jev](https://typesafe.ai) over the decoded Rego | subtler **unconditional denials**, an **underspecified check** (reads a field it never compares), and — with `--context` — an **over-scoped** policy |
+
+The flagship check — a deny that refuses all evidence — is caught **both**
+deterministically (so `--structural-only` and keyless CI catch the blatant case)
+and by Jev (for the subtle ones); the two are de-duplicated so it reports once.
 
 The split is deliberate. Anything security-critical and decidable from the
 document is deterministic, so an outage can never turn it into "looks fine". Jev

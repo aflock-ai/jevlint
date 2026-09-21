@@ -1,6 +1,7 @@
 package lint
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"testing"
 )
@@ -83,6 +84,43 @@ func TestDiff_DetectsWeakening(t *testing.T) {
 		if !hasCheck(fs, want) {
 			t.Errorf("expected diff to flag %q, got %+v", want, fs)
 		}
+	}
+}
+
+func TestUnconditionalDeny(t *testing.T) {
+	bad := `package p
+deny[msg] {
+	msg := "rendered without a binding"
+}`
+	if !hasUnconditionalDeny(bad) {
+		t.Error("an unguarded deny must be detected")
+	}
+	good := `package p
+deny[msg] {
+	not is_string(input.commithash)
+	msg := "missing commithash"
+}`
+	if hasUnconditionalDeny(good) {
+		t.Error("a guarded deny must not be flagged")
+	}
+	single := `package p
+deny[msg] { msg := "always" }`
+	if !hasUnconditionalDeny(single) {
+		t.Error("a single-line unguarded deny must be detected")
+	}
+}
+
+func TestSecretInPolicy(t *testing.T) {
+	// A private key mistakenly placed where a public cert belongs.
+	key := "-----BEGIN PRIVATE KEY-----\nMIIabc\n-----END PRIVATE KEY-----\n"
+	enc := base64.StdEncoding.EncodeToString([]byte(key))
+	p := &Policy{Roots: map[string]Root{"r": {Certificate: enc}}}
+	if !hasCheck(SecretChecks(p), "secret-in-policy") {
+		t.Error("a private key in a root cert must be flagged")
+	}
+	clean := &Policy{Roots: map[string]Root{"r": {Certificate: base64.StdEncoding.EncodeToString([]byte("-----BEGIN CERTIFICATE-----\nMIIabc\n-----END CERTIFICATE-----\n"))}}}
+	if hasCheck(SecretChecks(clean), "secret-in-policy") {
+		t.Error("a public certificate must not be flagged")
 	}
 }
 

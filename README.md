@@ -36,6 +36,67 @@ jevlint version
 The API key is read, in order, from `--api-key`, `$TYPESAFE_API_KEY` /
 `$JEVLINT_API_KEY`, `~/.config/typesafe/api_key`, then the macOS keychain.
 
+## Recipes: cilock, witness, pushgate
+
+All three use the same witness-policy document, so `jevlint` lints any of them.
+`jevlint` auto-detects the flavor; `--type` overrides it. The rule of thumb:
+**lint before you sign, and diff every new release against the last.**
+
+### cilock
+
+Generate a policy, lint it, and only then sign — `cilock policy validate` checks
+the shape, `jevlint` checks the meaning:
+
+```
+cilock policy from-commit <sha> --platform-url https://platform.testifysec.com -o policy.json
+jevlint lint policy.json --type cilock            # catch deny-everything, wildcard functionary, missing TSA
+cilock policy validate -p policy.json             # schema check
+cilock sign -f policy.json -o policy.signed.json  # only after both pass
+```
+
+No API key handy (CI, airgap)? The worst bugs still get caught:
+
+```
+jevlint lint policy.json --structural-only        # deterministic: unconditional-deny, secret-in-policy, wildcard functionary
+```
+
+### witness
+
+The witness policy you hand to `witness verify -p` is a plain JSON file — lint it
+as you edit it:
+
+```
+jevlint lint policy.json --type witness
+witness verify -p policy.json -a <attestation> ...
+```
+
+### pushgate
+
+Download the draft (or a signed release exported to JSON) and lint it before you
+request signing — this is exactly the check that would have caught the draft that
+denied every push:
+
+```
+jevlint lint tests-pass-...policy.json --type pushgate
+```
+
+Add repo context to enable the over-scoped check (Jev flags a policy that
+demands evidence the repo can't produce, e.g. a Go build in a README-only repo):
+
+```
+jevlint lint draft.policy.json --context "README-only docs repo, no build, no tests"
+```
+
+Compare a new release against the live one to catch a gate being quietly
+weakened — a dropped check, a widened functionary, removed timestamping:
+
+```
+jevlint diff live-release.json new-release.json
+```
+
+Wire it into CI with the bundled Action (`.github/workflows/policy-lint.yml`): it
+lints every changed `*.policy.json` on a PR and diffs it against the base branch.
+
 ## Two kinds of check
 
 | kind | how | catches |

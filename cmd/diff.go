@@ -27,7 +27,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	}
 	findings := lint.DiffPolicies(oldP, newP)
 	if viper.GetBool("json") {
-		emitJSON(args[1], newP.Flavor(), findings, 0)
+		emitJSON(args[1], newP.Flavor(), findings, 0, nil)
 	} else {
 		fmt.Printf("jevlint diff  %s -> %s\n", args[0], args[1])
 		if len(findings) == 0 {

@@ -127,6 +127,15 @@ precedence order flag → env → config → default:
 | `--min-prob` | `JEVLINT_MIN_PROB` | `min-prob` | `0.70` |
 | `--api-key` | `TYPESAFE_API_KEY` | `api-key` | file / keychain |
 | `--json` | `JEVLINT_JSON` | `json` | `false` |
+| `--concurrency` | `JEVLINT_CONCURRENCY` | `concurrency` | `6` |
+| `--batch-size` | `JEVLINT_BATCH_SIZE` | `batch-size` | `1` |
+
+**Speed.** Each Rego module gets one request carrying both its questions, and
+requests run 6 at a time. On a real 12-module pushgate policy that took a run
+from 11–12s to **1.6–2.3s** with answers identical to the old one-question-per-
+request client. Merging several modules into one request (`--batch-size` > 1) is
+available but measured to **miss real underspecified findings** — see
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#batching-and-concurrency).
 
 Config file: `~/.config/jevlint/config.yaml` (or `--config <path>`).
 

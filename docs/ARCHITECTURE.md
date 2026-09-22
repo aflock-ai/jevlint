@@ -93,6 +93,64 @@ never compares) — plus, with `--context`, whether the policy is **over-scoped*
 for the repo. Jev **fails open by contract**: any non-answer becomes
 `could-not-check` and exit 2, never a pass.
 
+## Batching and concurrency
+
+The Jev API takes **one shared `state` per request**. So there are two different
+things "batching" can mean, and they behave very differently:
+
+- **Same-state batching** — many questions about *one* module in one request.
+  This is what DeepEval does (every claim judged against one set of truths).
+  jevlint does it by default: each module's two questions share one request.
+- **Cross-state merging** — several *different* modules packed into one request,
+  each at a named field (`module_00`, `module_01`, …).
+
+```mermaid
+flowchart LR
+    subgraph default[default: one module per request, run in parallel]
+        M1[module A: 2 questions] --> R1((req))
+        M2[module B: 2 questions] --> R2((req))
+        M3[module C: 2 questions] --> R3((req))
+    end
+    subgraph merged[opt-in --batch-size N: modules merged]
+        MA[module A] --> RM((one req))
+        MB[module B] --> RM
+        MC[module C] --> RM
+    end
+    style default fill:#e0efe4,stroke:#15803d,color:#111
+    style merged fill:#f7e5da,stroke:#c2410c,color:#111
+```
+
+**Measured** (jev-1.13.0, 2026-09-23, calls from India, 2 runs per mode; the old
+binary sent every question as its own request):
+
+| workload | old binary | **default** (1/request, 6 in flight) | merged ×8 |
+|---|---|---|---|
+| real 12-module pushgate policy | 11–12s | **1.6–2.3s** | 1.4s |
+| 12-module stress policy (4 unconditional, 4 underspecified, 4 clean) | 10–11s | **1.5–1.6s** | 1.0s |
+| answers vs old, max \|Δp\| (noise floor 0.03–0.05) | — | **0.03–0.13** | 0.34–0.42 |
+| verdicts at 0.70 vs old | — | **identical** | **missed 3 of 4 underspecified** |
+
+Merging left `unconditional-deny` untouched — true positives held at 0.94–0.98
+beside clean neighbours, no smearing. But it **suppressed `underspecified-check`**:
+true positives fell from 0.72–0.92 (one per request) to 0.53–0.76 at 8 per request
+and to 0.26 at 16. "Reads a field it never compares" needs a careful read of the
+whole module, and that degrades when a dozen modules share the context.
+
+So the default is one module per request, and the speed comes from
+**concurrency** — the same requests run serially took 6.1–6.8s. Concurrency
+changes nothing Jev sees, and cost is unchanged either way: Jev bills input
+tokens, and the same Rego is sent once in both designs.
+
+A lone module is sent in the exact pre-batching shape (`state: {"rego": …}`, the
+original wording). An earlier attempt that sent it behind an opaque field name
+lost signal — a true unconditional deny fell from 0.86 to 0.64–0.67 and was
+missed — and every single-module policy is a batch of one.
+
+Failure handling: a failed request is retried once after a back-off (under
+concurrency a failure is usually a 429); an oversize request is split in half so
+one large module cannot sink the rest; an auth failure is final. A question that
+still has no answer is `could-not-check`, never a pass.
+
 ## Check catalog
 
 | check | lane | catches | grounded in |
@@ -127,6 +185,11 @@ Config precedence is cobra + viper: **flag → env → config file → default**
 | `--min-prob` | `JEVLINT_MIN_PROB` | `0.70` |
 | `--api-key` | `TYPESAFE_API_KEY` / `JEVLINT_API_KEY` | file `~/.config/typesafe/api_key` → keychain |
 | `--json` | `JEVLINT_JSON` | `false` |
+| `--concurrency` | `JEVLINT_CONCURRENCY` | `6` |
+| `--batch-size` | `JEVLINT_BATCH_SIZE` | `1` (above 1 lowers underspecified recall — see above) |
+
+Every Jev run prints what it spent: `jev: 12 request(s) for 24 question(s),
+batch size 1, concurrency 6`.
 
 Exit codes: `0` clean · `1` findings (or weakenings) · `2` could-not-check or
 error. The `2` maps onto a gate that must refuse rather than guess.

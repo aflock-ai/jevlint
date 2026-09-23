@@ -219,7 +219,7 @@ flowchart TD
   leaked-key mistakes that otherwise surface only as refused pushes in production.
 - **Distinct from the policy engine.** The engine (OPA rego eval, cert chain, TSA)
   runs at verify time on real evidence. jevlint never does that work.
-- **Shares its Jev approach with `ai_jev` and `jade triage`.** `ai_jev` is the
+- **Shares its Jev approach with rookery's `ai_jev`.** `ai_jev` is the
   verify-time provider that lets a *policy step* ask Jev a typed question about an
   *attestation*; jevlint asks Jev typed questions about the *policy document* at
   authoring time. The triage core is designed so the same logic can later back an
@@ -231,7 +231,7 @@ flowchart TD
 ## Verified against
 
 Field names and semantics were checked against go-witness
-(`subtrees/rookery/attestation/policy`) and against real witness policies on
+(`aflock-ai/rookery attestation/policy`) and against real witness policies on
 disk — a key-based `policy.json` and a cert-based Fulcio policy both lint clean.
 jevlint asks Jev only where its strength (presence + intent) applies; it never
 asks version/CVE questions, because Jev confuses a patched dependency with a

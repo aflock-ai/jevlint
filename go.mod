@@ -1,4 +1,4 @@
-module github.com/manzil-infinity180/jev-policy-lint
+module github.com/aflock-ai/jevlint
 
 go 1.23.0
 

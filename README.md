@@ -1,4 +1,4 @@
-# jev-policy-lint
+# jevlint
 
 `jevlint` lints a **witness / cilock / pushgate** policy for *meaning*, not schema.
 
@@ -16,14 +16,14 @@ catch a gate being silently loosened.
 ## Install
 
 ```
-go install github.com/manzil-infinity180/jev-policy-lint@latest
+go install github.com/aflock-ai/jevlint@latest
 ```
 
 or build from source:
 
 ```
-git clone https://github.com/manzil-infinity180/jev-policy-lint
-cd jev-policy-lint && go build -o jevlint .
+git clone https://github.com/aflock-ai/jevlint
+cd jevlint && go build -o jevlint .
 ```
 
 ## Use

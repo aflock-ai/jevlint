@@ -12,7 +12,7 @@ import (
 
 // Policy is a witness policy document — the shape shared by witness, cilock and
 // pushgate. Field names and types match go-witness
-// (subtrees/rookery/attestation/policy). Every field is optional so a malformed
+// (aflock-ai/rookery attestation/policy). Every field is optional so a malformed
 // policy still lints.
 type Policy struct {
 	Expires              string                     `json:"expires"`

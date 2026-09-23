@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/manzil-infinity180/jev-policy-lint/internal/lint"
+	"github.com/aflock-ai/jevlint/internal/lint"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

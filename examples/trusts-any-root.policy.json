@@ -31,7 +31,7 @@
               "*"
             ],
             "uris": [
-              "spiffe://testifysec.com/tenant/b47684cc/agent/*"
+              "spiffe://testifysec.com/tenant/example-tenant/agent/*"
             ],
             "roots": [
               "*"

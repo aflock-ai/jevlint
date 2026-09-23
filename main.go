@@ -3,6 +3,6 @@
 // between two versions — silent weakening of the gate.
 package main
 
-import "github.com/manzil-infinity180/jev-policy-lint/cmd"
+import "github.com/aflock-ai/jevlint/cmd"
 
 func main() { cmd.Execute() }

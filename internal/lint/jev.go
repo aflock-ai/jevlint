@@ -35,11 +35,13 @@ const (
 	// 0.53–0.76 at 8 per request and to 0.26 at 16, missing 3–4 of 4 at 0.70.
 	// Speed comes from DefaultConcurrency instead, which changes nothing Jev sees.
 	DefaultBatchSize = 1
-	// DefaultConcurrency is how many requests are in flight at once. jade triage
-	// saw ~24% of batches fail at 32 workers; stay well under that and retry.
+	// DefaultConcurrency is how many requests are in flight at once. An earlier
+	// Jev issue-triage integration saw ~24% of batches fail at 32 workers; stay
+	// well under that and retry.
 	DefaultConcurrency = 6
 	// maxBatchBytes bounds the Rego text in one request so a batch stays well
-	// inside Jev's context window (a K=25 jade triage batch was ~13k tokens).
+	// inside Jev's context window (a 25-item batch in that integration was
+	// ~13k tokens).
 	maxBatchBytes = 24 << 10
 	// maxQuestions is the per-request question ceiling (rookery ai_jev.go).
 	maxQuestions = 128
@@ -75,7 +77,7 @@ func (c *Client) Model() string  { return c.model }
 func (c *Client) Requests() int  { return int(c.requests.Load()) }
 func (c *Client) Questions() int { return int(c.questions.Load()) }
 
-// ResolveKey mirrors the jev CLI / jade triage lookup: env, then the documented
+// ResolveKey mirrors the jev CLI's lookup: env, then the documented
 // file, then the macOS keychain. Viper layers config on top of this in cmd.
 func ResolveKey() string {
 	if k := strings.TrimSpace(os.Getenv("TYPESAFE_API_KEY")); k != "" {
@@ -196,7 +198,8 @@ func (c *Client) askNoul(state map[string]any, qid, question, trueMeans, falseMe
 }
 
 // regoItem is one Rego module, addressed in a batch by its own NAMED top-level
-// field. jade triage measured an array layout contaminating answers at K>=16
+// field. An earlier Jev triage integration measured an array layout
+// contaminating answers at K>=16
 // (one true positive smeared 0.97 onto unrelated neighbours); named fields
 // were clean up to K=25. Do not turn this into an array.
 type regoItem struct {

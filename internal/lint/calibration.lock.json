@@ -1,0 +1,35 @@
+{
+  "model": "jev-1.13.0",
+  "created": "2026-09-25",
+  "corpus_sha256": "ce9c6d03d04ae411466232e15ab1277e18c9462174d0b95f4586ee5de5f4a972",
+  "runs": 5,
+  "target_precision": 1,
+  "questions": {
+    "unconditional_deny": {
+      "wording_sha256": "9293e4229c0122bf60d58cc80669fdd0759e3b3a318d2ead2ebe0acf30bbc7d2",
+      "threshold": 0.52,
+      "review_floor": 0.35,
+      "precision": 1,
+      "recall": 1,
+      "separable": true,
+      "min_positive": 0.86,
+      "max_negative": 0.18,
+      "noise": 0.04,
+      "positive_modules": 10,
+      "negative_modules": 21
+    },
+    "underspecified": {
+      "wording_sha256": "f945aff880faa1fdf121e3924a4a9865380d91ff28359d4141ae00d7d139bcb1",
+      "threshold": 0.62,
+      "review_floor": 0.38,
+      "precision": 1,
+      "recall": 1,
+      "separable": true,
+      "min_positive": 0.91,
+      "max_negative": 0.33,
+      "noise": 0.05,
+      "positive_modules": 8,
+      "negative_modules": 23
+    }
+  }
+}

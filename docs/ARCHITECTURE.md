@@ -80,7 +80,7 @@ sequenceDiagram
     J->>T: POST /v1/systemone<br/>state={rego}, noul question
     alt reachable, answered
         T-->>J: {"noul": 0.98}
-        Note over J: >= min-prob (0.70) -> finding<br/>with the probability
+        Note over J: >= calibrated threshold -> finding<br/>in the review band -> REVIEW
     else no key / timeout / non-2xx / junk
         T-->>J: no usable answer
         Note over J: could-not-check -> exit 2<br/>never a silent "clean"
@@ -151,6 +151,63 @@ concurrency a failure is usually a 429); an oversize request is split in half so
 one large module cannot sink the rest; an auth failure is final. A question that
 still has no answer is `could-not-check`, never a pass.
 
+## Calibration
+
+A noul is a probability, but the point where it becomes a finding is a choice —
+and one global `--min-prob 0.70` was never measured. Each question now has its
+own threshold, fitted to a labeled corpus and locked.
+
+```mermaid
+flowchart LR
+    C[testdata/calibration<br/>31 labeled modules] --> K[jevlint calibrate<br/>each module × 5 runs<br/>same request path as lint]
+    K --> F[fit per question<br/>report = middle of the gap<br/>review band = noise-aware]
+    F --> L[calibration.lock.json<br/>model · wording hashes · corpus hash]
+    L -->|go:embed| B[jevlint lint]
+    L --> T[unit test: lock matches<br/>wording + corpus + model]
+    L --> X[calibrate --check<br/>re-run, fail on drift]
+    style L fill:#d9eef2,stroke:#0e7490,color:#111
+```
+
+**The corpus.** 31 Rego modules, each labeled for every question with a
+one-line reason: the 12-module synthetic stress set, the Rego shipped in
+`examples/`, a real pushgate policy, and hand-written hard cases (a guard that
+is a helper rule always true, a `default` rule nothing overrides, an allowlist
+defined but never applied, a field compared only inside a helper function).
+Every unconditional-deny label was checked against `opa eval`: each positive
+denies both an empty and a well-formed input, each negative passes the
+well-formed one. Ambiguous shapes (a field read only to format a message) are
+left out rather than guessed.
+
+**The fit.** With positives and negatives separated, the report threshold is the
+middle of the gap; if they overlap, it is the lowest score that still meets the
+target precision. It is never below 0.50. The review band starts at the lower of
+"highest negative + noise" and "lowest positive − noise", never below 0.35,
+where noise is the widest run-to-run spread of any single module. The second
+term matters: in one 3-run pass a hard underspecified module scored 0.46–0.69
+across identical requests, and without it that positive was dropped, not
+reviewed. Precision and recall are recorded at the threshold actually chosen.
+
+**The lock vouches for exactly one thing:** the model, each question's exact
+wording (a hash of the lone and batched phrasings and both criteria), and the
+corpus bytes. `lint` uses a question's calibrated threshold only if its wording
+hash matches, and otherwise falls back to `--min-prob` with a note. A unit test
+fails on any mismatch, so it runs on every PR with no API key; `calibrate
+--check` re-runs the corpus with a key and fails if precision or recall at the
+locked thresholds fell more than `--tolerance`.
+
+**What it changed.** Measured with the corpus, 5 runs each, the underspecified
+question's original wording ("reads a field from the input but never compares
+it") separated positives ≥ 0.55 from negatives ≤ 0.33 — a 0.22 margin (and its
+weakest positive fell to 0.46 in an earlier 3-run pass). Naming the mechanism
+("a value taken from `input` … assigned but never used in any condition of a
+deny rule") gave positives ≥ 0.91 and negatives ≤ 0.33–0.35 — a 0.56–0.58
+margin — in two separate fits, and an independent `--check` run held precision
+and recall at 1.00 at the locked threshold. Unconditional-deny, asked in the same
+requests, did not move (0.86–0.87 / 0.18). The wording was switched on that
+evidence. The corpus is still small (8 underspecified positives) and partly
+written by us; widening it with real policies is the way to trust these numbers
+further.
+
 ## Check catalog
 
 | check | lane | catches | grounded in |
@@ -182,7 +239,8 @@ Config precedence is cobra + viper: **flag → env → config file → default**
 | flag | env | default |
 |---|---|---|
 | `--model` | `JEVLINT_MODEL` | `jev-1.13.0` |
-| `--min-prob` | `JEVLINT_MIN_PROB` | `0.70` |
+| `--min-prob` | `JEVLINT_MIN_PROB` | calibrated per question (see Calibration); `0.70` fallback. Set explicitly, it applies to every question |
+| `--calibration` | — | the lock compiled into the binary |
 | `--api-key` | `TYPESAFE_API_KEY` / `JEVLINT_API_KEY` | file `~/.config/typesafe/api_key` → keychain |
 | `--json` | `JEVLINT_JSON` | `false` |
 | `--concurrency` | `JEVLINT_CONCURRENCY` | `6` |

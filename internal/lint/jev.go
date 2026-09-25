@@ -230,12 +230,12 @@ var regoKinds = []regoKind{
 	},
 	{
 		name:   "underspecified",
-		single: "Does this Rego read a field from the input but never compare it, so it admits values it appears to check?",
+		single: "Is there a value taken from `input` that is assigned to a variable or rule but never used in any condition of a deny rule, so the policy's decision ignores it?",
 		question: func(f string) string {
-			return "Does the Rego module in field `" + f + "` read a field from the input but never compare it, so it admits values it appears to check?"
+			return "In the Rego module in field `" + f + "`, is there a value taken from `input` that is assigned to a variable or rule but never used in any condition of a deny rule, so the policy's decision ignores it?"
 		},
-		trueMeans:  "a field is read but never constrained, leaving a hole",
-		falseMeans: "every field the decision depends on is compared",
+		trueMeans:  "some input value is read and then ignored by every deny rule",
+		falseMeans: "every input value that is read is used in a deny condition",
 	},
 }
 
@@ -392,46 +392,103 @@ func (c *Client) split(batch []regoItem) (map[string]float64, map[string]string)
 	return ans, failed
 }
 
-// SemanticChecks are the judgments a schema validator cannot make. Modules are
-// grouped batchSize per Jev request, and up to concurrency requests run at
-// once. Findings are assembled afterwards in module order, so the result does
-// not depend on which request finished first. repoContext is optional; when
-// set it enables the over-scoped check.
-func SemanticChecks(p *Policy, c *Client, repoContext string, minProb float64, batchSize, concurrency int) []Finding {
-	items := regoItems(p)
+// JudgeModules asks every Rego question about each module ON ITS OWN, in
+// exactly the request shape lint sends a lone module, up to concurrency at
+// once, and returns answers[i][question]. Calibration fits thresholds to these
+// answers, so they must come from the same path lint uses; and a module left
+// unanswered is an error, never a gap — a fit over partial data would be a
+// threshold nobody measured.
+func (c *Client) JudgeModules(regos []string, concurrency int) ([]map[string]float64, error) {
+	items := make([]regoItem, len(regos))
+	for i, r := range regos {
+		items[i] = regoItem{field: "module_00", loc: fmt.Sprintf("module %d", i), rego: r}
+	}
+	answers, failed := c.judge(items, 1, concurrency, func(i int) string { return fmt.Sprintf("m%04d", i) })
+	out := make([]map[string]float64, len(items))
+	for i := range items {
+		out[i] = map[string]float64{}
+		for _, k := range regoKinds {
+			id := qid(fmt.Sprintf("m%04d", i), k.name)
+			p, ok := answers[id]
+			if !ok {
+				reason := failed[id]
+				if reason == "" {
+					reason = "no usable answer"
+				}
+				return nil, fmt.Errorf("module %d, %s: %s", i, k.name, reason)
+			}
+			out[i][k.name] = p
+		}
+	}
+	return out, nil
+}
+
+// judge runs items through Jev, batchSize per request and up to concurrency
+// requests at once. key(i) names item i in the returned maps; an item's field
+// is what it travels under in a merged request, which need not be unique here
+// because a lone module never uses it.
+func (c *Client) judge(items []regoItem, batchSize, concurrency int, key func(int) string) (map[string]float64, map[string]string) {
 	answers := map[string]float64{}
 	failed := map[string]string{}
 	if concurrency < 1 {
 		concurrency = 1
 	}
+	type job struct {
+		batch []regoItem
+		keys  []string
+	}
 	var (
 		mu   sync.Mutex
 		wg   sync.WaitGroup
-		work = make(chan []regoItem)
+		work = make(chan job)
 	)
 	for w := 0; w < concurrency; w++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for b := range work {
-				a, f := c.runBatch(b, false)
+			for j := range work {
+				a, f := c.runBatch(j.batch, false)
 				mu.Lock()
-				for k, v := range a {
-					answers[k] = v
-				}
-				for k, v := range f {
-					failed[k] = v
+				for bi, it := range j.batch {
+					for _, k := range regoKinds {
+						from, to := qid(it.field, k.name), qid(j.keys[bi], k.name)
+						if v, ok := a[from]; ok {
+							answers[to] = v
+						}
+						if r, ok := f[from]; ok {
+							failed[to] = r
+						}
+					}
 				}
 				mu.Unlock()
 			}
 		}()
 	}
+	next := 0
 	for _, b := range chunkItems(items, batchSize, maxBatchBytes, len(regoKinds), maxQuestions) {
-		work <- b
+		keys := make([]string, len(b))
+		for i := range b {
+			keys[i] = key(next)
+			next++
+		}
+		work <- job{b, keys}
 	}
 	close(work)
 	wg.Wait()
+	return answers, failed
+}
 
+// SemanticChecks are the judgments a schema validator cannot make. Modules are
+// grouped batchSize per Jev request, and up to concurrency requests run at
+// once. Findings are assembled afterwards in module order, so the result does
+// not depend on which request finished first. repoContext is optional; when
+// set it enables the over-scoped check.
+//
+// th decides, per question, what is a finding and what is a REVIEW: a
+// probability in the review band is reported as unsure rather than dropped.
+func SemanticChecks(p *Policy, c *Client, repoContext string, th Thresholds, batchSize, concurrency int) []Finding {
+	items := regoItems(p)
+	answers, failed := c.judge(items, batchSize, concurrency, func(i int) string { return items[i].field })
 	var out []Finding
 	for _, it := range items {
 		ud := qid(it.field, "unconditional_deny")
@@ -442,17 +499,19 @@ func SemanticChecks(p *Policy, c *Client, repoContext string, minProb float64, b
 			}
 			out = append(out, Finding{Unknown, "could-not-check", it.loc,
 				"Jev gave no answer (" + reason + ") — this module was not judged.", "", 0})
-		} else if pr >= minProb {
-			out = append(out, Finding{High, "unconditional-deny", it.loc,
-				fmt.Sprintf("Rego appears to deny unconditionally (p=%.2f) — this rule refuses all evidence.", pr),
-				"Guard the deny with a condition on the input, or remove the placeholder rule.", pr})
+		} else if f, ok := judged(th.For("unconditional_deny"), pr, Finding{High, "unconditional-deny", it.loc,
+			fmt.Sprintf("Rego appears to deny unconditionally (p=%.2f) — this rule refuses all evidence.", pr),
+			"Guard the deny with a condition on the input, or remove the placeholder rule.", pr}); ok {
+			out = append(out, f)
 		}
 		// One could-not-check per module is enough; an unanswered underspecified
 		// question is not reported twice.
-		if pr, ok := answers[qid(it.field, "underspecified")]; ok && pr >= minProb {
-			out = append(out, Finding{Medium, "underspecified-check", it.loc,
+		if pr, ok := answers[qid(it.field, "underspecified")]; ok {
+			if f, ok := judged(th.For("underspecified"), pr, Finding{Medium, "underspecified-check", it.loc,
 				fmt.Sprintf("Rego may read a field without constraining it (p=%.2f) — it could admit what it looks like it checks.", pr),
-				"Compare every field the decision depends on; a field read but not compared is a hole.", pr})
+				"Compare every field the decision depends on; a field read but not compared is a hole.", pr}); ok {
+				out = append(out, f)
+			}
 		}
 	}
 
@@ -467,11 +526,27 @@ func SemanticChecks(p *Policy, c *Client, repoContext string, minProb float64, b
 			"the required types fit what this repo produces"); !ok {
 			out = append(out, Finding{Unknown, "could-not-check", loc,
 				"Jev gave no answer (" + reason + ") — over-scoping not judged.", "", 0})
-		} else if pr >= minProb {
-			out = append(out, Finding{Medium, "over-scoped", loc,
-				fmt.Sprintf("Policy may be over-scoped for this repo (p=%.2f): requires %s.", pr, strings.Join(types, ", ")),
-				"Require only the attestation types this repository actually produces.", pr})
+		} else if f, ok := judged(th.For("over_scoped"), pr, Finding{Medium, "over-scoped", loc,
+			fmt.Sprintf("Policy may be over-scoped for this repo (p=%.2f): requires %s.", pr, strings.Join(types, ", ")),
+			"Require only the attestation types this repository actually produces.", pr}); ok {
+			out = append(out, f)
 		}
 	}
 	return out
+}
+
+// judged applies a threshold to one answer: at or above Report the finding
+// stands as written; in the review band it becomes a REVIEW saying Jev is
+// unsure; below the band there is no finding.
+func judged(t Threshold, pr float64, f Finding) (Finding, bool) {
+	switch {
+	case pr >= t.Report:
+		return f, true
+	case pr >= t.Review:
+		f.Severity = Review
+		f.Message = fmt.Sprintf("Jev is unsure (p=%.2f; reports at %.2f, reviews from %.2f) — read this module: %s",
+			pr, t.Report, t.Review, f.Message)
+		return f, true
+	}
+	return Finding{}, false
 }

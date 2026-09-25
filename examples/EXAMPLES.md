@@ -18,8 +18,10 @@ export TYPESAFE_API_KEY="$(cat ~/.config/typesafe/api_key)"
 jevlint lint examples/<name>.policy.json
 ```
 
-`--min-prob <n>` sets where a Jev finding is reported (default 0.70). Exit codes:
-`0` clean · `1` findings (or weakenings) · `2` could-not-check or error.
+Jev findings are reported at calibrated per-question thresholds (see the README);
+`--min-prob <n>` overrides them with one threshold for every question. Exit
+codes: `0` clean · `1` findings (or weakenings) · `2` could-not-check or error.
+A `REVIEW` is shown but does not fail the run.
 
 ## Lint examples (verified)
 

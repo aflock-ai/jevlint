@@ -158,7 +158,7 @@ func TestBatch_SameFindingsAtEveryBatchSizeAndConcurrency(t *testing.T) {
 			f := &fakeJev{t: t}
 			srv := httptest.NewServer(f)
 			c := testClient(srv.URL)
-			got := findingSet(SemanticChecks(p, c, "", 0.70, size, conc))
+			got := findingSet(SemanticChecks(p, c, "", Uniform(0.70), size, conc))
 			srv.Close()
 			if want == nil {
 				want = got
@@ -197,7 +197,7 @@ func TestBatch_MissingAnswerIsCouldNotCheckForThatModuleOnly(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"answers": ans})
 	}))
 	defer srv.Close()
-	fs := SemanticChecks(policyWith(mixedModules()), testClient(srv.URL), "", 0.70, 8, 4)
+	fs := SemanticChecks(policyWith(mixedModules()), testClient(srv.URL), "", Uniform(0.70), 8, 4)
 	cnc := 0
 	for _, f := range fs {
 		if f.Check == "could-not-check" {
@@ -225,7 +225,7 @@ func TestBatch_TooLargeSplitsAndIsolatesTheBigModule(t *testing.T) {
 	}}
 	srv := httptest.NewServer(f)
 	defer srv.Close()
-	fs := SemanticChecks(policyWith(mods), testClient(srv.URL), "", 0.70, 11, 4)
+	fs := SemanticChecks(policyWith(mods), testClient(srv.URL), "", Uniform(0.70), 11, 4)
 	got := findingSet(fs)
 	wantCNC := "could-not-check @ step s · t · r06"
 	var sawCNC, sawDeny, sawUnder bool
@@ -251,7 +251,7 @@ func TestBatch_AuthFailureIsFinalNoRetryNoSplit(t *testing.T) {
 	srv := httptest.NewServer(f)
 	defer srv.Close()
 	c := testClient(srv.URL)
-	fs := SemanticChecks(policyWith(mixedModules()), c, "", 0.70, 8, 4)
+	fs := SemanticChecks(policyWith(mixedModules()), c, "", Uniform(0.70), 8, 4)
 	if c.Requests() != 2 {
 		t.Errorf("auth failure: want 2 requests (one per chunk, no retry or split), got %d", c.Requests())
 	}
@@ -270,7 +270,7 @@ func TestBatch_TransientFailureIsRetriedOnce(t *testing.T) {
 	srv := httptest.NewServer(f)
 	defer srv.Close()
 	c := testClient(srv.URL)
-	fs := SemanticChecks(policyWith(mixedModules()), c, "", 0.70, 11, 4)
+	fs := SemanticChecks(policyWith(mixedModules()), c, "", Uniform(0.70), 11, 4)
 	if c.Requests() != 2 {
 		t.Errorf("want 1 failed + 1 retried request, got %d", c.Requests())
 	}
@@ -300,7 +300,7 @@ func TestBatch_LoneModuleUsesThePreBatchingRequestShape(t *testing.T) {
 		}})
 	}))
 	defer srv.Close()
-	fs := SemanticChecks(policyWith([]string{"package p\ndeny[msg] { msg := \"x\" }"}), testClient(srv.URL), "", 0.70, 8, 4)
+	fs := SemanticChecks(policyWith([]string{"package p\ndeny[msg] { msg := \"x\" }"}), testClient(srv.URL), "", Uniform(0.70), 8, 4)
 
 	if len(seen.State) != 1 || seen.State["rego"] == "" {
 		t.Errorf("lone module: state must be exactly {\"rego\": …}, got keys %v", keys(seen.State))

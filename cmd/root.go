@@ -42,7 +42,7 @@ func init() {
 	pf := rootCmd.PersistentFlags()
 	pf.StringVar(&cfgFile, "config", "", "config file (default $HOME/.config/jevlint/config.yaml)")
 	pf.String("model", "", "Jev model (env JEVLINT_MODEL; default jev-1.13.0)")
-	pf.Float64("min-prob", 0.70, "report a Jev finding at or above this probability (env JEVLINT_MIN_PROB)")
+	pf.Float64("min-prob", 0.70, "report a Jev finding at or above this probability for EVERY question (env JEVLINT_MIN_PROB). Unset, calibrated per-question thresholds apply and this is only the fallback for a question the calibration lock does not cover")
 	pf.String("api-key", "", "TypeSafe API key (env TYPESAFE_API_KEY / JEVLINT_API_KEY; falls back to file and keychain)")
 	pf.Bool("json", false, "machine-readable output")
 
@@ -54,7 +54,7 @@ func init() {
 	// as well as the JEVLINT_-prefixed form.
 	_ = viper.BindEnv("api-key", "TYPESAFE_API_KEY", "JEVLINT_API_KEY")
 
-	rootCmd.AddCommand(lintCmd, diffCmd, versionCmd)
+	rootCmd.AddCommand(lintCmd, diffCmd, calibrateCmd, versionCmd)
 }
 
 func initConfig() {

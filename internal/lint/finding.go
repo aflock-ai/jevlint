@@ -11,6 +11,10 @@ const (
 	Medium  = "MEDIUM"
 	Low     = "LOW"
 	Unknown = "UNKNOWN"
+	// Review is a Jev answer inside a question's calibrated review band: not
+	// confident enough to report, too close to drop. It is shown, and it does
+	// not fail the run.
+	Review = "REVIEW"
 )
 
 // Finding is one issue. Fix is the concrete remediation; Prob is set only for
@@ -24,7 +28,7 @@ type Finding struct {
 	Prob     float64 `json:"probability,omitempty"`
 }
 
-var sevRank = map[string]int{High: 0, Medium: 1, Unknown: 2, Low: 3}
+var sevRank = map[string]int{High: 0, Medium: 1, Unknown: 2, Low: 3, Review: 4}
 
 // Sort orders findings most-severe first, stably.
 func Sort(fs []Finding) {
@@ -59,6 +63,17 @@ func Dedupe(fs []Finding) []Finding {
 		out = append(out, f)
 	}
 	return out
+}
+
+// CountReview returns how many findings are REVIEW (inside a review band).
+func CountReview(fs []Finding) int {
+	n := 0
+	for _, f := range fs {
+		if f.Severity == Review {
+			n++
+		}
+	}
+	return n
 }
 
 // CountCNC returns how many findings are could-not-check (Jev gave no answer).

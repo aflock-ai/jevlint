@@ -1,0 +1,50 @@
+name: test
+
+# Build, vet and test on every PR. The tests include the offline half of the
+# calibration drift gate: they fail if a question's wording, the corpus or the
+# pinned model changed without re-running `jevlint calibrate`. With a
+# TYPESAFE_API_KEY secret, `calibrate --check` also re-runs the corpus against
+# Jev and fails if the locked thresholds drifted.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt needed on: $unformatted"
+            exit 1
+          fi
+
+      - name: vet
+        run: go vet ./...
+
+      - name: test
+        run: go test -race -count=1 ./...
+
+      - name: calibration drift check
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+        run: |
+          if [ -z "${TYPESAFE_API_KEY:-}" ]; then
+            echo "::notice::TYPESAFE_API_KEY not set — skipping calibrate --check (the offline lock test above still ran)"
+            exit 0
+          fi
+          go build -o jevlint .
+          ./jevlint calibrate --check --runs 3

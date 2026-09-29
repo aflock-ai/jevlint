@@ -32,6 +32,8 @@ cd jevlint && go build -o jevlint .
 jevlint lint <policy.json>              # structural + Jev
 jevlint lint <policy.json> --structural-only   # deterministic only, no key, no egress
 jevlint diff <old.json> <new.json>      # flag where NEW is weaker than OLD
+jevlint calibrate                       # re-fit Jev thresholds to the labeled corpus
+jevlint calibrate --check               # CI: fail if the locked thresholds drifted
 jevlint version
 ```
 
@@ -124,7 +126,8 @@ precedence order flag → env → config → default:
 | flag | env | config key | default |
 |---|---|---|---|
 | `--model` | `JEVLINT_MODEL` | `model` | `jev-1.13.0` |
-| `--min-prob` | `JEVLINT_MIN_PROB` | `min-prob` | `0.70` |
+| `--min-prob` | `JEVLINT_MIN_PROB` | `min-prob` | calibrated per question; `0.70` fallback |
+| `--calibration` | — | — | the lock built into the binary |
 | `--api-key` | `TYPESAFE_API_KEY` | `api-key` | file / keychain |
 | `--json` | `JEVLINT_JSON` | `json` | `false` |
 | `--concurrency` | `JEVLINT_CONCURRENCY` | `concurrency` | `6` |
@@ -150,15 +153,47 @@ jevlint diff examples/good.policy.json examples/deny-everything.policy.json   # 
 ## Exit codes
 
 `0` clean · `1` findings (or weakenings) · `2` could-not-check or error. The `2`
-maps onto a gate that must refuse rather than guess.
+maps onto a gate that must refuse rather than guess. A `REVIEW` is printed but
+does not fail the run.
 
-## Thresholds
+## Thresholds are calibrated, not guessed
 
-From adversarial testing of Jev on supply-chain evidence: refuse at **~0.90**,
-warn from **~0.60**. `--min-prob` sets where a finding is reported. Jev is a
-strong presence-and-behaviour detector but a poor version oracle — it confuses a
-patched dependency with a vulnerable one — so `jevlint` never asks it CVE or
-version questions. Treat every Jev finding as a reviewer's flag, not a verdict.
+Each Jev question has its own threshold, fitted to a labeled corpus
+(`testdata/calibration/`, 31 Rego modules: the examples, a real pushgate
+policy, and hand-written hard cases, every unconditional-deny label checked
+against `opa eval`). `jevlint calibrate` judges every module five times through
+the same request path `lint` uses and writes `internal/lint/calibration.lock.json`,
+which is compiled into the binary:
+
+| question | reports at | review band | on the corpus |
+|---|---|---|---|
+| `unconditional-deny` | ≥ 0.52 | 0.35–0.52 | positives ≥ 0.86, negatives ≤ 0.18 |
+| `underspecified-check` | ≥ 0.62 | 0.38–0.62 | positives ≥ 0.91, negatives ≤ 0.33 |
+
+- **Report** is the middle of the gap between the labeled positives and
+  negatives, never below 0.50 (a noul there is a coin flip).
+- **Review** catches an answer too close to drop: it is shown as `REVIEW`, with
+  the probability and both thresholds, and does not fail the run. The band
+  reaches down past the weakest positive by Jev's measured run-to-run spread, so
+  a real finding that lands low on one run is sent to a person, not dropped.
+- **The lock vouches for one model and one wording.** It records the model, a
+  hash of every question's exact wording, and a hash of the corpus. A question
+  whose wording no longer matches falls back to `--min-prob`, with a note; a
+  unit test fails on any mismatch, so a wording edit without re-calibrating
+  cannot merge. `jevlint calibrate --check` re-runs the corpus and fails if
+  precision or recall at the locked thresholds dropped.
+- An explicit `--min-prob` (flag, env or config) overrides the lock with one
+  threshold for every question and no review band.
+
+Adding a module: drop a `.rego` file in `testdata/calibration/`, label it for
+**every** question in `corpus.json` with a one-line reason (leave out anything
+ambiguous), run `jevlint calibrate`, read the misses it prints, rebuild, and
+commit the lock with the corpus.
+
+Jev is a strong presence-and-behaviour detector but a poor version oracle — it
+confuses a patched dependency with a vulnerable one — so `jevlint` never asks it
+CVE or version questions. Treat every Jev finding as a reviewer's flag, not a
+verdict.
 
 ## What it does not do
 

@@ -1,0 +1,283 @@
+{
+  "modules": [
+    {
+      "id": "syn-pos0",
+      "file": "syn-pos0.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "guard is the constant true"
+    },
+    {
+      "id": "syn-pos1",
+      "file": "syn-pos1.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "guard is the tautology 1 == 1"
+    },
+    {
+      "id": "syn-pos2",
+      "file": "syn-pos2.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "only a local assignment, nothing on input"
+    },
+    {
+      "id": "syn-pos3",
+      "file": "syn-pos3.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "guard is not false"
+    },
+    {
+      "id": "syn-us0",
+      "file": "syn-us0.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": true
+      },
+      "reason": "summary.errors read, never compared"
+    },
+    {
+      "id": "syn-us1",
+      "file": "syn-us1.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": true
+      },
+      "reason": "suppressed_findings read, never compared"
+    },
+    {
+      "id": "syn-us2",
+      "file": "syn-us2.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": true
+      },
+      "reason": "timed_out read, never compared"
+    },
+    {
+      "id": "syn-us3",
+      "file": "syn-us3.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": true
+      },
+      "reason": "GOARCH read, never compared"
+    },
+    {
+      "id": "syn-neg0",
+      "file": "syn-neg0.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "commithash presence checked"
+    },
+    {
+      "id": "syn-neg1",
+      "file": "syn-neg1.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "exitcode checked"
+    },
+    {
+      "id": "syn-neg2",
+      "file": "syn-neg2.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "failed and errors both denied on"
+    },
+    {
+      "id": "syn-neg3",
+      "file": "syn-neg3.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "treeSize checked"
+    },
+    {
+      "id": "ex-clean-cert",
+      "file": "ex-clean-cert.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "every deny guarded; helper rule compares exitcode"
+    },
+    {
+      "id": "ex-deny-everything",
+      "file": "ex-deny-everything.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "second deny has no condition"
+    },
+    {
+      "id": "ex-leaky",
+      "file": "ex-leaky.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "only deny has no condition"
+    },
+    {
+      "id": "ex-weakened",
+      "file": "ex-weakened.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "only deny has no condition"
+    },
+    {
+      "id": "ex-good",
+      "file": "ex-good.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "commithash and remotes both checked"
+    },
+    {
+      "id": "ex-witness-cmd",
+      "file": "ex-witness-cmd.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "cmd compared to the expected argv"
+    },
+    {
+      "id": "ex-underspecified",
+      "file": "ex-underspecified.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": true
+      },
+      "reason": "summary.errors read, never compared"
+    },
+    {
+      "id": "real-diary-command",
+      "file": "real-diary-command.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "exitcode and cmd each checked"
+    },
+    {
+      "id": "real-diary-git",
+      "file": "real-diary-git.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "commithash, marker and status each checked"
+    },
+    {
+      "id": "hard-pos-helper-true",
+      "file": "hard-pos-helper-true.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "guard is a helper rule that is always true"
+    },
+    {
+      "id": "hard-pos-default-true",
+      "file": "hard-pos-default-true.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "guard is a default-true rule nothing overrides"
+    },
+    {
+      "id": "hard-pos-local-tautology",
+      "file": "hard-pos-local-tautology.rego",
+      "labels": {
+        "unconditional_deny": true,
+        "underspecified": false
+      },
+      "reason": "guard compares a local constant to itself"
+    },
+    {
+      "id": "hard-us-body-assign",
+      "file": "hard-us-body-assign.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": true
+      },
+      "reason": "cmd read inside the deny body, never compared"
+    },
+    {
+      "id": "hard-us-unused-allowlist",
+      "file": "hard-us-unused-allowlist.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": true
+      },
+      "reason": "builder id only presence-checked; the allowlist is never applied"
+    },
+    {
+      "id": "hard-us-signer-keyids",
+      "file": "hard-us-signer-keyids.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": true
+      },
+      "reason": "signature keyids collected, never compared"
+    },
+    {
+      "id": "hard-neg-helper-fn",
+      "file": "hard-neg-helper-fn.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "builder id compared inside a helper function"
+    },
+    {
+      "id": "hard-neg-set-membership",
+      "file": "hard-neg-set-membership.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "builder id checked against an allowlist set"
+    },
+    {
+      "id": "hard-neg-type-check",
+      "file": "hard-neg-type-check.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "predicate type compared; a field that is always present is still a condition"
+    },
+    {
+      "id": "hard-neg-iteration",
+      "file": "hard-neg-iteration.rego",
+      "labels": {
+        "unconditional_deny": false,
+        "underspecified": false
+      },
+      "reason": "each finding's severity compared"
+    }
+  ]
+}
